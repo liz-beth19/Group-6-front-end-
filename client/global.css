@@ -1,0 +1,122 @@
+/** @import must precede all other statements */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 270 20% 98%;
+    --foreground: 262 47% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 262 47% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 262 47% 12%;
+
+    --primary: 266 84% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 270 14% 96%;
+    --secondary-foreground: 262 47% 12%;
+
+    --muted: 270 14% 96%;
+    --muted-foreground: 260 10% 45%;
+
+    --accent: 210 90% 56%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 270 16% 90%;
+    --input: 270 16% 90%;
+    --ring: 266 84% 55%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 270 20% 98%;
+
+    --sidebar-foreground: 262 47% 12%;
+
+    --sidebar-primary: 266 84% 55%;
+
+    --sidebar-primary-foreground: 0 0% 100%;
+
+    --sidebar-accent: 270 14% 96%;
+
+    --sidebar-accent-foreground: 262 47% 12%;
+
+    --sidebar-border: 270 16% 90%;
+
+    --sidebar-ring: 266 84% 55%;
+  }
+
+  .dark {
+    --background: 262 50% 8%;
+    --foreground: 0 0% 100%;
+
+    --card: 262 50% 8%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 262 50% 8%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 266 84% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 258 36% 20%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 258 36% 20%;
+    --muted-foreground: 260 20% 75%;
+
+    --accent: 210 90% 56%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 258 36% 20%;
+    --input: 258 36% 20%;
+    --ring: 266 84% 60%;
+    --sidebar-background: 258 36% 20%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 266 84% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 258 36% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 258 36% 20%;
+    --sidebar-ring: 266 84% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Admin-specific sidebar purple theme */
+/* Admin sidebar theme aligned with user dashboard card style */
+.admin-sidebar {
+  --sidebar-background: var(--card);
+  --sidebar-foreground: var(--card-foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--secondary-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
