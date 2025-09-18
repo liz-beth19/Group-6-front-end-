@@ -141,7 +141,7 @@ export function SiteHeader() {
             </div>
             {isLoggedIn && (
               <div className="pt-2 text-sm text-white/80">
-                {admin ? `Admin: ${admin.username}` : `Logged in as: ${user?.username}`}
+                {admin ? `${admin.name} ${admin.surname}` : `Logged in as: ${user?.username}`}
               </div>
             )}
           </div>

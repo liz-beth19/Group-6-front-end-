@@ -1,4 +1,14 @@
-export type JobPost = { id: string; title: string; company: string; location: string; type: string; description: string; createdAt: string };
+export type JobPost = { 
+  id: string; 
+  title: string; 
+  description: string; 
+  requirements?: string; 
+  company?: string; 
+  location?: string; 
+  type?: string; 
+  postedDate?: string; 
+  createdAt: string; 
+};
 
 const JOBS_KEY = "gg_job_posts";
 

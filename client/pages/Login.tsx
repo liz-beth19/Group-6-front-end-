@@ -40,7 +40,6 @@ export default function Login() {
                 const res = await fetch("http://localhost:8080/api/auth/login", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  
                   body: JSON.stringify({ email, password }),
                 });
                 if (!res.ok) {
@@ -55,9 +54,11 @@ export default function Login() {
                 const data = await res.json();
                 
                 const role = (data?.role || "").toString().toUpperCase();
+                console.log("Login response:", data);
+                console.log("Role:", role);
                 if (role === "ADMIN") {
-                 
-                  setAdminFromApi(data?.username || email);
+                  console.log("Setting admin from API...");
+                  await setAdminFromApi(data?.username || email, data?.token);
                 } else {
                   
                   const ok = await login(email, password);

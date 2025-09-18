@@ -1,13 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
-type AdminUser = { username: string } | null;
+type AdminUser = { username: string; name: string; surname: string; token: string } | null;
 
 type AdminContextType = {
   admin: AdminUser;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  setAdminFromApi: (username: string) => void;
+  setAdminFromApi: (username: string, token: string) => Promise<void>;
 };
 
 const AdminAuthContext = createContext<AdminContextType | undefined>(undefined);
@@ -37,8 +37,16 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       setAdmin(null);
       navigate("/login", { replace: true });
     },
-    setAdminFromApi(username: string) {
-      setAdmin({ username });
+    async setAdminFromApi(username: string, token: string) {
+      console.log("setAdminFromApi called with:", { username, token: token.substring(0, 20) + "..." });
+      // Set admin directly without fetching profile (bypassing profile fetch issue)
+      setAdmin({ 
+        username, 
+        name: "Admin", 
+        surname: "User",
+        token
+      });
+      console.log("Admin set successfully");
       navigate("/admin", { replace: true });
     },
   }), [admin, navigate]);

@@ -10,7 +10,7 @@ export function UserMenu() {
   const { user, logout: userLogout } = useAuth();
   const { admin, logout: adminLogout } = useAdminAuth();
   const { theme, setTheme } = useTheme();
-  const name = admin ? `Admin: ${admin.username}` : user?.username || "";
+  const name = admin ? `${admin.name} ${admin.surname}` : user?.username || "";
 
   if (!user && !admin) return null;
 
