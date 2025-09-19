@@ -51,7 +51,7 @@ function Sidebar() {
       <nav className="flex-1 p-4 space-y-2">
         {navItem('/dashboard', 'Dashboard', <BarChart3 className="w-5 h-5" />)}
         {navItem('/dashboard/applications', 'Applications', <FileCheck className="w-5 h-5" />)}
-        {navItem('/dashboard/jobs', 'Jobs', <Briefcase className="w-5 h-5" />)}
+        {navItem('/dashboard/opportunities', 'Opportunities', <Briefcase className="w-5 h-5" />)}
         {navItem('/dashboard/roadmaps', 'Roadmaps', <Map className="w-5 h-5" />)}
         {navItem('/dashboard/mentorship', 'Mentorship', <Users className="w-5 h-5" />)}
         {navItem('/dashboard/calendar', 'Calendar', <Calendar className="w-5 h-5" />)}

@@ -1,12 +1,79 @@
 import { companies } from "@/data/companies";
 import { Link } from "react-router-dom";
 import { getSavedJobs, toggleSavedJob } from "@/store/app";
-import { useState } from "react";
-import { getJobPosts } from "@/store/jobs";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { JobPost } from "@/store/jobs";
 
 export default function Opportunities() {
   const [saved, setSaved] = useState<string[]>(getSavedJobs());
+  const [jobs, setJobs] = useState<JobPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch jobs from Spring Boot API
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Try different possible Spring Boot endpoints
+        const possibleEndpoints = [
+          "http://localhost:8080/api/jobs",
+          "http://localhost:8080/api/admin/public",
+          "http://localhost:8080/jobs", 
+          "http://localhost:8080/api/v1/jobs",
+          "http://localhost:8081/api/jobs",
+          "http://localhost:8081/jobs"
+        ];
+        
+        let response = null;
+        let lastError = null;
+        
+        for (const endpoint of possibleEndpoints) {
+          try {
+            console.log(`Trying endpoint: ${endpoint}`);
+            response = await fetch(endpoint, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+              }
+            });
+            
+            if (response.ok) {
+              console.log(`Success with endpoint: ${endpoint}`);
+              break;
+            } else {
+              console.log(`Failed with ${endpoint}: ${response.status} ${response.statusText}`);
+            }
+          } catch (err) {
+            console.log(`Error with ${endpoint}:`, err);
+            lastError = err;
+          }
+        }
+        
+        if (!response || !response.ok) {
+          throw new Error(`Failed to fetch jobs. Last error: ${lastError?.message || 'All endpoints failed'}`);
+        }
+        
+        const jobsData = await response.json();
+        console.log("Jobs data received:", jobsData);
+        
+        // Handle different response formats
+        const jobs = Array.isArray(jobsData) ? jobsData : jobsData.data || jobsData.jobs || [];
+        setJobs(jobs.sort((a: JobPost, b: JobPost) => (a.createdAt < b.createdAt ? 1 : -1)));
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+        setError(`Failed to load jobs: ${err.message}. Please check if your Spring Boot API is running.`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, []);
 
   return (
     <section className="py-6 md:py-8">
@@ -36,7 +103,7 @@ export default function Opportunities() {
         </div>
 
         <div className="mt-6 flex items-center justify-between text-xs text-muted-foreground">
-          <div>Showing {getJobPosts().length} Jobs Results</div>
+          <div>Showing {loading ? "..." : jobs.length} Jobs Results</div>
           <div className="flex items-center gap-2">
             <span>Newest</span>
             <button className="rounded-md border px-2 py-1">▤</button>
@@ -44,8 +111,26 @@ export default function Opportunities() {
           </div>
         </div>
 
+        {loading && (
+          <div className="mt-4 flex justify-center py-8">
+            <div className="text-sm text-muted-foreground">Loading jobs...</div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+            <div className="text-sm text-destructive">{error}</div>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-2 text-xs text-destructive underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {getJobPosts().map(j => (
+          {jobs.map(j => (
             <article key={j.id} className="flex items-start gap-4 rounded-xl border bg-card p-4 shadow-sm">
               <div className="h-10 w-10 rounded-md bg-primary/10" />
               <div className="min-w-0 flex-1">
@@ -62,7 +147,7 @@ export default function Opportunities() {
               </div>
             </article>
           ))}
-          {getJobPosts().length===0 && <div className="text-sm text-muted-foreground">No job posts yet.</div>}
+          {!loading && !error && jobs.length === 0 && <div className="text-sm text-muted-foreground">No job posts yet.</div>}
         </div>
       </div>
     </section>

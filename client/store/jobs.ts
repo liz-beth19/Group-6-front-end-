@@ -55,3 +55,7 @@ export function removeJobPost(id: string) {
 export function getJobPostById(id: string): JobPost | undefined {
   return getJobPosts().find(j => j.id === id);
 }
+
+export function clearJobPosts(): void {
+  localStorage.removeItem(JOBS_KEY);
+}

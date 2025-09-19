@@ -1,25 +1,100 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { companies } from "@/data/companies";
 import { addApplication } from "@/store/app";
-import { getJobPostById } from "@/store/jobs";
+import { JobPost } from "@/store/jobs";
 
 export default function Apply() {
   const { slug, jobId } = useParams<{ slug: string; jobId: string }>();
   const navigate = useNavigate();
   const isPost = slug === "post";
-  const post = isPost && jobId ? getJobPostById(jobId) : undefined;
+  const [post, setPost] = useState<JobPost | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
   const company = !isPost ? companies.find((c) => c.slug === slug) : undefined;
   const job = !isPost ? company?.jobs.find((j) => j.id === jobId) : undefined;
 
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Fetch job post from Spring Boot API if it's a post
+  useEffect(() => {
+    if (isPost && jobId) {
+      const fetchJob = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          
+          // Try different possible Spring Boot endpoints
+          const possibleEndpoints = [
+            `http://localhost:8080/api/jobs/${jobId}`,
+            `http://localhost:8080/api/admin/public/${jobId}`,
+            `http://localhost:8080/jobs/${jobId}`,
+            `http://localhost:8080/api/v1/jobs/${jobId}`,
+            `http://localhost:8081/api/jobs/${jobId}`,
+            `http://localhost:8081/jobs/${jobId}`
+          ];
+          
+          let response = null;
+          let lastError = null;
+          
+          for (const endpoint of possibleEndpoints) {
+            try {
+              console.log(`Trying job endpoint: ${endpoint}`);
+              response = await fetch(endpoint, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Accept": "application/json"
+                }
+              });
+              
+              if (response.ok) {
+                console.log(`Success with job endpoint: ${endpoint}`);
+                break;
+              } else {
+                console.log(`Failed with ${endpoint}: ${response.status} ${response.statusText}`);
+              }
+            } catch (err) {
+              console.log(`Error with ${endpoint}:`, err);
+              lastError = err;
+            }
+          }
+          
+          if (!response || !response.ok) {
+            throw new Error(`Job not found. Last error: ${lastError?.message || 'All endpoints failed'}`);
+          }
+          
+          const jobData = await response.json();
+          console.log("Job data received:", jobData);
+          setPost(jobData);
+        } catch (err) {
+          console.error("Error fetching job:", err);
+          setError(`Failed to load job details: ${err.message}`);
+        } finally {
+          setLoading(false);
+        }
+      };
 
-  if ((!isPost && (!company || !job)) || (isPost && !post)) {
+      fetchJob();
+    }
+  }, [isPost, jobId]);
+
+  const [submitting, setSubmitting] = useState(false);
+
+  if (loading) {
     return (
       <section className="py-10">
         <div className="container mx-auto px-4">
-          <p className="text-sm text-destructive">Job not found.</p>
+          <div className="text-sm text-muted-foreground">Loading job details...</div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || ((!isPost && (!company || !job)) || (isPost && !post))) {
+    return (
+      <section className="py-10">
+        <div className="container mx-auto px-4">
+          <p className="text-sm text-destructive">{error || "Job not found."}</p>
           <Link to="/dashboard/opportunities" className="text-primary underline">Back to opportunities</Link>
         </div>
       </section>
