@@ -1,10 +1,32 @@
 export type Application = {
   id: string;
-  company: string;
-  jobId: string;
-  position: string;
-  dateApplied: string;
-  status: "Pending" | "Interview" | "Rejected" | "Hired";
+  province?: string;
+  applicationName?: string;
+  coverLetter?: string;
+  status: "PENDING" | "APPROVED" | "DECLINE";
+  cvPath?: string;
+  idDocumentPath?: string;
+  coverLetterPath?: string;
+  appliedDate: string;
+  applicant?: {
+    id: string;
+    email: string;
+    name: string;
+  };
+  jobOpening?: {
+    id: string;
+    title: string;
+    company?: string;
+    location?: string;
+    type?: string;
+  };
+  // Legacy fields for backward compatibility
+  company?: string;
+  jobId?: string;
+  position?: string;
+  dateApplied?: string;
+  resumeName?: string;
+  resumeDataUrl?: string;
 };
 
 const APPS_KEY = "gg_apps";

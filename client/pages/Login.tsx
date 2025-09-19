@@ -60,6 +60,10 @@ export default function Login() {
                   console.log("Setting admin from API...");
                   await setAdminFromApi(data?.username || email, data?.token);
                 } else {
+                  // Store token for regular users
+                  if (data?.token) {
+                    localStorage.setItem("gg_auth_token", data.token);
+                  }
                   
                   const ok = await login(email, password);
                   if (!ok) {

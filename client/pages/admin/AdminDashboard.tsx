@@ -1,8 +1,8 @@
-import { getApplications } from "@/store/app";
+import { getApplications, type Application } from "@/store/app";
 import { type JobPost } from "@/store/jobs";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend, Bar, BarChart } from "recharts";
-import { BarChart2, Briefcase, LayoutDashboard, MessageSquare, Newspaper } from "lucide-react";
+import { BarChart2, Briefcase, LayoutDashboard, MessageSquare, Newspaper, ChevronLeft, GraduationCap, Users, FileCheck, Calendar, Mic, User, Settings, MessageCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,38 +10,280 @@ import { Button } from "@/components/ui/button";
 import { addPost, getPosts, removePost, type Post } from "@/store/posts";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 
-function aggregate() {
-  const apps = getApplications();
-  const dates = Array.from(new Set(apps.map(a=>a.dateApplied))).sort();
-  const companies = Array.from(new Set(apps.map(a=>a.company)));
+function aggregate(applications: Application[]) {
+  const apps = applications;
+  const dates = Array.from(new Set(apps.map(a=>a.dateApplied || a.appliedDate))).sort();
+  const companies = Array.from(new Set(apps.map(a=>a.company || a.jobOpening?.company || '')));
   const byDate: Record<string, any> = {};
   for (const d of dates) {
     byDate[d] = { date: d };
     for (const c of companies) byDate[d][c] = 0;
   }
   for (const a of apps) {
-    if (byDate[a.dateApplied]) byDate[a.dateApplied][a.company] += 1;
+    const date = a.dateApplied || a.appliedDate;
+    const company = a.company || a.jobOpening?.company || '';
+    if (byDate[date]) byDate[date][company] += 1;
   }
   return { data: dates.map(d=>byDate[d]), companies };
 }
 
-function aggregateStatus() {
-  const apps = getApplications();
-  const statuses = ["Pending","Interview","Rejected","Hired"] as const;
+function aggregateStatus(applications: Application[]) {
+  const apps = applications;
+  const statuses = ["PENDING","APPROVED","DECLINE"] as const;
   return statuses.map((s)=> ({ status: s, count: apps.filter(a=>a.status===s).length }));
 }
 
 const palette = ["#6f67feff","#00B5FF","#FF7A59","#22C55E","#F59E0B","#E879F9"]; // different colours
 
+function AdminSidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+  
+  const navItem = (to: string, label: string, icon: React.ReactNode) => (
+    <NavLink 
+      to={to} 
+      end={to==='/admin'} 
+      className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+        isActive 
+          ? 'bg-purple-200 text-purple-900 font-medium' 
+          : 'text-purple-700 hover:bg-purple-50 hover:text-purple-900'
+      }`}
+    >
+      {icon}
+      {!collapsed && <span className="text-sm">{label}</span>}
+    </NavLink>
+  );
+
+  const anchorItem = (href: string, label: string, icon: React.ReactNode) => (
+    <a 
+      href={href} 
+      className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-purple-700 hover:bg-purple-50 hover:text-purple-900"
+    >
+      {icon}
+      {!collapsed && <span className="text-sm">{label}</span>}
+    </a>
+  );
+
+  return (
+    <aside className={`${collapsed ? 'w-16' : 'w-64'} bg-purple-100 transition-all duration-300 min-h-screen flex flex-col`}>
+      {/* Header/Logo Section */}
+      <div className="p-6 border-b border-purple-200">
+        <div className="flex items-center justify-between">
+          {!collapsed && (
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-3">
+                <GraduationCap className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-purple-900 text-xl font-bold">GRADGATE</h1>
+              <p className="text-purple-700 text-xs text-center leading-tight">
+                Admin<br />Panel
+              </p>
+            </div>
+          )}
+          <button 
+            onClick={() => setCollapsed(!collapsed)}
+            className="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center hover:bg-purple-300 transition-colors"
+          >
+            <ChevronLeft className={`w-4 h-4 text-purple-700 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Navigation Items */}
+      <nav className="flex-1 p-4 space-y-2">
+        {anchorItem('#top', 'Dashboard', <LayoutDashboard className="w-5 h-5" />)}
+        {anchorItem('#charts-company', 'Company Chart', <BarChart2 className="w-5 h-5" />)}
+        {anchorItem('#charts-status', 'Status Chart', <BarChart2 className="w-5 h-5" />)}
+        
+        {!collapsed && (
+          <div className="mt-4 mb-2 px-4 py-2 text-xs uppercase tracking-wide text-purple-600 font-semibold">
+            Jobs
+          </div>
+        )}
+        {anchorItem('#jobs-post', 'Post Job', <Briefcase className="w-5 h-5" />)}
+        {anchorItem('#jobs-list', 'Jobs & Applicants', <FileCheck className="w-5 h-5" />)}
+        
+        {!collapsed && (
+          <div className="mt-4 mb-2 px-4 py-2 text-xs uppercase tracking-wide text-purple-600 font-semibold">
+            Applications
+          </div>
+        )}
+        {anchorItem('#applications', 'View Applications', <FileCheck className="w-5 h-5" />)}
+        
+        {!collapsed && (
+          <div className="mt-4 mb-2 px-4 py-2 text-xs uppercase tracking-wide text-purple-600 font-semibold">
+            Communication
+          </div>
+        )}
+        {navItem('/admin/chat', 'Admin Chat', <MessageCircle className="w-5 h-5" />)}
+        {anchorItem('#posts', 'Posts', <Newspaper className="w-5 h-5" />)}
+      </nav>
+    </aside>
+  );
+}
+
 export default function AdminDashboard() {
   const { admin } = useAdminAuth();
-  const { data, companies } = aggregate();
-  const statusData = aggregateStatus();
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    show: boolean;
+    applicationId: string;
+    newStatus: string;
+    applicantName: string;
+  } | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const { data, companies } = aggregate(applications);
+  const statusData = aggregateStatus(applications);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [jobs, setJobs] = useState<JobPost[]>([]);
+
+  // Fetch applications from backend API
+  useEffect(() => {
+    if (!admin) return; // Don't fetch if admin is not loaded yet
+    
+    const fetchApplications = async () => {
+      try {
+        setLoading(true);
+        if (!admin?.token) {
+          setError("Admin not authenticated. Please log in again.");
+          return;
+        }
+
+        console.log("Making request to applications endpoint with token:", admin.token.substring(0, 20) + "...");
+        
+        const response = await fetch("http://localhost:8080/api/admin/applications", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${admin.token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        
+        console.log("Response status:", response.status);
+        console.log("Response headers:", Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+          let errorDetails = "";
+          try {
+            const errorData = await response.json();
+            console.log("Error response data:", errorData);
+            errorDetails = errorData.message || errorData.error || "";
+          } catch (e) {
+            const textResponse = await response.text();
+            console.log("Error response text:", textResponse);
+            errorDetails = textResponse;
+          }
+          throw new Error(`Failed to fetch applications: ${response.status} - ${errorDetails}`);
+        }
+
+        const apps = await response.json();
+        console.log("Applications data received:", apps);
+        console.log("First application structure:", apps[0]);
+        setApplications(apps);
+      } catch (err: any) {
+        setError(err.message);
+        console.error("Error fetching applications:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApplications();
+  }, [admin]);
+
+  // Function to refresh applications
+  const refreshApplications = async () => {
+    try {
+      setLoading(true);
+      if (!admin?.token) {
+        setError("Admin not authenticated. Please log in again.");
+        return;
+      }
+
+      const response = await fetch("http://localhost:8080/api/admin/applications", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${admin.token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch applications: ${response.status}`);
+      }
+
+      const apps = await response.json();
+      setApplications(apps);
+      console.log("Applications refreshed successfully");
+    } catch (err: any) {
+      setError(err.message);
+      console.error("Error refreshing applications:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to show confirmation dialog
+  const showStatusConfirmation = (applicationId: string, newStatus: 'PENDING' | 'APPROVED' | 'DECLINE', applicantName: string) => {
+    setConfirmDialog({
+      show: true,
+      applicationId,
+      newStatus,
+      applicantName
+    });
+  };
+
+  // Function to update application status
+  const updateApplicationStatus = async (applicationId: string, newStatus: 'PENDING' | 'APPROVED' | 'DECLINE') => {
+    try {
+      if (!admin?.token) {
+        setError("Admin not authenticated. Please log in again.");
+        return;
+      }
+
+      console.log(`Updating application ${applicationId} to status: ${newStatus}`);
+
+      const response = await fetch(`http://localhost:8080/api/admin/applications/${applicationId}/status?status=${newStatus}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${admin.token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        let errorMessage = `Failed to update status (${response.status})`;
+        try {
+          const errorData = await response.json();
+          if (errorData?.message) errorMessage = errorData.message;
+        } catch {}
+        throw new Error(errorMessage);
+      }
+
+      const updatedApplication = await response.json();
+      console.log("Status updated successfully:", updatedApplication);
+
+      // Update the applications state with the new status
+      setApplications(prevApplications => 
+        prevApplications.map(app => 
+          app.id === applicationId 
+            ? { ...app, status: newStatus }
+            : app
+        )
+      );
+
+      // Close confirmation dialog
+      setConfirmDialog(null);
+      
+    } catch (err: any) {
+      console.error("Error updating application status:", err);
+      alert(`Failed to update status: ${err.message}`);
+    }
+  };
 
   // job form state
   const [jobTitle, setJobTitle] = useState("");
@@ -330,24 +572,60 @@ export default function AdminDashboard() {
     }
   };
 
+  if (!admin) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-semibold">Loading admin session...</div>
+          <div className="text-sm text-muted-foreground mt-2">Please wait while we verify your authentication.</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-semibold">Loading applications...</div>
+          <div className="text-sm text-muted-foreground mt-2">Fetching data from database</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-semibold text-red-600">Error loading applications</div>
+          <div className="text-sm text-muted-foreground mt-2">{error}</div>
+          <div className="flex gap-3 justify-center mt-4">
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Retry
+            </button>
+            {error.includes("not authenticated") && (
+              <button 
+                onClick={() => window.location.href = "/login"} 
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Go to Login
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto flex gap-6 px-4 py-6">
-        <aside className="hidden w-64 shrink-0 border-r border-primary/30 bg-primary/15 p-4 md:block sticky top-0 h-screen overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-          <nav className="space-y-1 text-sm">
-            <a href="#top" className="block rounded-md px-3 py-2 hover:bg-primary/25"><span className="inline-flex items-center gap-2"><LayoutDashboard size={16}/> Dashboard</span></a>
-            <a href="#charts-company" className="block rounded-md px-3 py-2 hover:bg-primary/25"><span className="inline-flex items-center gap-2"><BarChart2 size={16}/> Company Chart</span></a>
-            <a href="#charts-status" className="block rounded-md px-3 py-2 hover:bg-primary/25"><span className="inline-flex items-center gap-2"><BarChart2 size={16}/> Status Chart</span></a>
-            <div className="mt-2 rounded-md px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground">Jobs</div>
-            <a href="#jobs-post" className="block rounded-md px-3 py-2 hover:bg-primary/25"><span className="inline-flex items-center gap-2"><Briefcase size={16}/> Post Job</span></a>
-            <a href="#jobs-list" className="block rounded-md px-3 py-2 hover:bg-primary/25"><span className="inline-flex items-center gap-2"><Briefcase size={16}/> Jobs & Applicants</span></a>
-            <div className="mt-2 rounded-md px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground">Communication</div>
-            <Link to="/admin/chat" className="block rounded-md px-3 py-2 hover:bg-primary/25"><span className="inline-flex items-center gap-2"><MessageSquare size={16}/> Admin Chat</span></Link>
-            <a href="#posts" className="block rounded-md px-3 py-2 hover:bg-primary/25"><span className="inline-flex items-center gap-2"><Newspaper size={16}/> Posts</span></a>
-          </nav>
-        </aside>
-        <div id="top" className="min-w-0 flex-1">
+    <div className="min-h-screen bg-gray-50 flex">
+      <AdminSidebar />
+      <div className="flex-1 overflow-auto">
+        <div id="top" className="p-6">
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
             <Link to="/admin/chat" className="text-sm text-primary underline">Open Chat</Link>
@@ -545,7 +823,7 @@ export default function AdminDashboard() {
         <h2 className="text-lg font-semibold">Jobs & applicants</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {jobs.map((j)=>{
-            const applicants = getApplications().filter(a=>a.jobId === j.id);
+            const applicants = applications.filter(a=>a.jobId === j.id);
             return (
               <div key={j.id} className="rounded-lg border p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -734,14 +1012,13 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {getApplications().map((a)=> (
+              {applications && applications.length > 0 ? applications.map((a)=> (
                 <tr key={a.id} className="border-t">
-                  <td className="px-4 py-3">{a.dateApplied}</td>
-                  <td className="px-4 py-3 capitalize">{a.company.replace(/-/g,' ')}</td>
-                  <td className="px-4 py-3">{a.position}</td>
+                  <td className="px-4 py-3">{a.appliedDate || a.dateApplied || 'N/A'}</td>
+                  <td className="px-4 py-3 capitalize">{(a.jobOpening?.company || a.company || 'N/A').replace(/-/g,' ')}</td>
+                  <td className="px-4 py-3">{a.jobOpening?.title || a.position || 'N/A'}</td>
                 </tr>
-              ))}
-              {getApplications().length === 0 && (
+              )) : (
                 <tr>
                   <td className="px-4 py-6 text-center text-muted-foreground" colSpan={3}>No applications yet.</td>
                 </tr>
@@ -750,9 +1027,214 @@ export default function AdminDashboard() {
           </table>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">Student view: <Link to="/dashboard" className="text-primary underline">open dashboard</Link></p>
-      </div>
+        </div>
+
+        {/* Applications Section */}
+        <div id="applications" className="mt-8 rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">All Applications</h2>
+            <button
+              onClick={refreshApplications}
+              disabled={loading}
+              className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+            >
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-secondary/50 text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 text-left">Date Applied</th>
+                  <th className="px-4 py-3 text-left">Applicant Name</th>
+                  <th className="px-4 py-3 text-left">Job Title</th>
+                  <th className="px-4 py-3 text-left">Company</th>
+                  <th className="px-4 py-3 text-left">Province</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {applications && applications.length > 0 ? applications.map((app) => {
+                  const job = jobs.find(j => j.id === (app.jobId || app.jobOpening?.id));
+                  return (
+                    <tr key={app.id} className="border-t">
+                      <td className="px-4 py-3">{app.dateApplied || app.appliedDate}</td>
+                      <td className="px-4 py-3">{app.applicationName || app.position || 'N/A'}</td>
+                      <td className="px-4 py-3">{job?.title || app.jobOpening?.title || 'Job Not Found'}</td>
+                      <td className="px-4 py-3 capitalize">{(app.company || app.jobOpening?.company || '').replace(/-/g,' ')}</td>
+                      <td className="px-4 py-3">{app.province || 'N/A'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          app.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                          app.status === 'DECLINE' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {app.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 flex-wrap">
+                          <button 
+                            onClick={() => setSelectedApplication(app)}
+                            className="text-xs text-blue-600 hover:underline hover:text-blue-800 font-medium"
+                          >
+                            View Details
+                          </button>
+                          {app.status !== 'APPROVED' && (
+                            <button 
+                              onClick={() => showStatusConfirmation(app.id, 'APPROVED', app.applicationName || app.position || 'N/A')}
+                              className="text-xs text-green-600 hover:underline hover:text-green-800 font-medium"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {app.status !== 'DECLINE' && (
+                            <button 
+                              onClick={() => showStatusConfirmation(app.id, 'DECLINE', app.applicationName || app.position || 'N/A')}
+                              className="text-xs text-red-600 hover:underline hover:text-red-800 font-medium"
+                            >
+                              Decline
+                            </button>
+                          )}
+                          {app.status !== 'PENDING' && (
+                            <button 
+                              onClick={() => showStatusConfirmation(app.id, 'PENDING', app.applicationName || app.position || 'N/A')}
+                              className="text-xs text-orange-600 hover:underline hover:text-orange-800 font-medium"
+                            >
+                              Reset to Pending
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td className="px-4 py-6 text-center text-muted-foreground" colSpan={7}>No applications yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
         </div>
       </div>
+
+      {/* Application Details Modal */}
+      {selectedApplication && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Application Details</h3>
+              <button
+                onClick={() => setSelectedApplication(null)}
+                className="text-gray-500 hover:text-gray-700 text-xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Applicant Name</label>
+                  <p className="text-sm">{selectedApplication.applicationName || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Status</label>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                    selectedApplication.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                    selectedApplication.status === 'DECLINE' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {selectedApplication.status}
+                  </span>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Province</label>
+                  <p className="text-sm">{selectedApplication.province || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Applied Date</label>
+                  <p className="text-sm">{selectedApplication.appliedDate || selectedApplication.dateApplied || 'N/A'}</p>
+                </div>
+              </div>
+              
+              {selectedApplication.coverLetter && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Cover Letter</label>
+                  <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm max-h-32 overflow-y-auto">
+                    {selectedApplication.coverLetter}
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">CV Path</label>
+                  <p className="text-sm text-blue-600">{selectedApplication.cvPath ? 'Available' : 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">ID Document</label>
+                  <p className="text-sm text-blue-600">{selectedApplication.idDocumentPath ? 'Available' : 'Not provided'}</p>
+                </div>
+              </div>
+              
+              {selectedApplication.jobOpening && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Job Details</label>
+                  <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm">
+                    <p><strong>Title:</strong> {selectedApplication.jobOpening.title}</p>
+                    <p><strong>Company:</strong> {selectedApplication.jobOpening.company}</p>
+                    {selectedApplication.jobOpening.location && <p><strong>Location:</strong> {selectedApplication.jobOpening.location}</p>}
+                    {selectedApplication.jobOpening.type && <p><strong>Type:</strong> {selectedApplication.jobOpening.type}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setSelectedApplication(null)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Confirm Status Change</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to change the status of <strong>{confirmDialog.applicantName}</strong>'s application to <strong>{confirmDialog.newStatus}</strong>?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => updateApplicationStatus(confirmDialog.applicationId, confirmDialog.newStatus as 'PENDING' | 'APPROVED' | 'DECLINE')}
+                className={`px-4 py-2 text-sm text-white rounded-md font-medium ${
+                  confirmDialog.newStatus === 'APPROVED' ? 'bg-green-600 hover:bg-green-700' :
+                  confirmDialog.newStatus === 'DECLINE' ? 'bg-red-600 hover:bg-red-700' :
+                  'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                Confirm {confirmDialog.newStatus}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -131,18 +131,34 @@ export default function Opportunities() {
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {jobs.map(j => (
-            <article key={j.id} className="flex items-start gap-4 rounded-xl border bg-card p-4 shadow-sm">
-              <div className="h-10 w-10 rounded-md bg-primary/10" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <div className="font-semibold">{j.title}</div>
-                  <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs text-primary">REMOTE</span>
+            <article key={j.id} className="rounded-lg border p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="text-sm font-semibold">{j.title}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {j.company && `${j.company} • `}
+                    {j.location && `${j.location} • `}
+                    {j.type && `${j.type}`}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                    <strong>Description:</strong> {j.description}
+                  </div>
+                  {j.requirements && (
+                    <div className="mt-1 text-xs text-muted-foreground line-clamp-1">
+                      <strong>Requirements:</strong> {j.requirements}
+                    </div>
+                  )}
+                  <div className="mt-1 text-[10px] text-muted-foreground">Posted {new Date(j.createdAt).toLocaleString()}</div>
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">{j.company} • {j.location}</div>
-                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{j.description}</p>
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">{j.type}</div>
-                  <Link to={`/dashboard/apply/post/${j.id}`} className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground">Apply</Link>
+                <div className="text-right">
+                  <div className="mt-2">
+                    <Link 
+                      to={`/dashboard/apply/post/${j.id}`} 
+                      className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      Apply
+                    </Link>
+                  </div>
                 </div>
               </div>
             </article>
