@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
-type User = { username: string; email?: string; address?: string } | null;
+type User = { username: string; email?: string; address?: string; fullName?: string } | null;
 
-type Profile = { username: string; email: string; address: string; password: string };
+type Profile = { username: string; email: string; address: string; password: string; fullName?: string };
 
 type AuthContextType = {
   user: User;
@@ -11,7 +11,7 @@ type AuthContextType = {
   logout: () => void;
   updateProfile: (updates: Partial<Profile>) => void;
   getProfile: () => Profile;
-  setUserFromApi: (u: { username: string; email?: string; address?: string }) => void;
+  setUserFromApi: (u: { username: string; email?: string; address?: string; fullName?: string }) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,7 +23,7 @@ function readProfile(): Profile {
     const raw = localStorage.getItem(PROFILE_KEY);
     if (raw) return JSON.parse(raw) as Profile;
   } catch {}
-  return { username: "", email: "", address: "", password: "" };
+  return { username: "", email: "", address: "", password: "", fullName: "" };
 }
 
 function writeProfile(p: Profile) {
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const current = readProfile();
       const merged: Profile = { ...current, ...updates } as Profile;
       writeProfile(merged);
-      setUser({ username: merged.username, email: merged.email, address: merged.address });
+      setUser({ username: merged.username, email: merged.email, address: merged.address, fullName: merged.fullName });
     },
     getProfile() {
       return readProfile();

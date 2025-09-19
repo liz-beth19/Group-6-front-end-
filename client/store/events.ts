@@ -44,3 +44,10 @@ export function addEvent(e: Omit<EventItem, "id">) {
 export function eventsForDate(date: string) {
   return getEvents().filter(e => e.date === date);
 }
+
+export function removeEvent(id: string) {
+  const items = getEvents();
+  const next = items.filter(e => e.id !== id);
+  save(next);
+  return next;
+}

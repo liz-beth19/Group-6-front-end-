@@ -19,7 +19,6 @@ import Applications from "./pages/dashboard/Applications";
 import Roadmaps from "./pages/dashboard/Roadmaps";
 import Mentorship from "./pages/dashboard/Mentorship";
 import Events from "./pages/dashboard/Events";
-import Settings from "./pages/dashboard/Settings";
 import Profile from "./pages/dashboard/Profile";
 import Chat from "./pages/dashboard/Chat";
 import CalendarPage from "./pages/dashboard/Calendar";
@@ -64,7 +63,6 @@ const App = () => (
                   <Route path="mentorship" element={<Mentorship />} />
                   <Route path="events" element={<Events />} />
                   <Route path="calendar" element={<CalendarPage />} />
-                  <Route path="settings" element={<Settings />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="chat" element={<Chat />} />
                   <Route path="company/:slug" element={<CompanyJobs />} />
