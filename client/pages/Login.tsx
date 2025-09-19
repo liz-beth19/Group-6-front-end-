@@ -63,7 +63,8 @@ export default function Login() {
                   const ok = await login(email, password);
                   if (!ok) {
                     
-                    setUserFromApi({ username: data?.username || email, email: data?.email || email });
+                    const fullName = [data?.name, data?.surname].filter(Boolean).join(" ");
+                    setUserFromApi({ username: data?.username || email, email: data?.email || email, fullName: fullName || undefined });
                   }
                 }
               } catch (err: any) {

@@ -12,7 +12,18 @@ export default function Applications() {
       (companyFilter === "All" || a.company === companyFilter)
     ), [apps, statusFilter, companyFilter]);
 
-  const progress = Math.min(100, Math.round((apps.length / 10) * 100));
+  // Realistic progress: weight by status across all applications
+  const progress = useMemo(()=>{
+    if (apps.length === 0) return 0;
+    const weights: Record<Application["status"], number> = {
+      Pending: 0.25,
+      Interview: 0.6,
+      Rejected: 0.25,
+      Hired: 1,
+    };
+    const total = apps.reduce((sum, a)=> sum + (weights[a.status] ?? 0), 0);
+    return Math.min(100, Math.round((total / apps.length) * 100));
+  }, [apps]);
 
   const companies = Array.from(new Set(apps.map((a) => a.company)));
 
