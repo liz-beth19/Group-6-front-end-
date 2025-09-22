@@ -32,18 +32,22 @@ export type Application = {
 const APPS_KEY = "gg_apps";
 const SAVED_KEY = "gg_saved_jobs";
 
-export function getApplications(): Application[] {
+function getUserKey(userId?: string | number): string {
+  return userId ? `${APPS_KEY}_${userId}` : APPS_KEY;
+}
+
+export function getApplications(userId?: string | number): Application[] {
   try {
-    return JSON.parse(localStorage.getItem(APPS_KEY) || "[]");
+    return JSON.parse(localStorage.getItem(getUserKey(userId)) || "[]");
   } catch {
     return [];
   }
 }
 
-export function addApplication(app: Application) {
-  const all = getApplications();
+export function addApplication(app: Application, userId?: string | number) {
+  const all = getApplications(userId);
   all.unshift(app);
-  localStorage.setItem(APPS_KEY, JSON.stringify(all));
+  localStorage.setItem(getUserKey(userId), JSON.stringify(all));
 }
 
 export function getSavedJobs(): string[] {

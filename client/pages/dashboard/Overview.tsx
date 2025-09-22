@@ -4,13 +4,32 @@ import { useAuth } from "@/context/AuthContext";
 import { useLocation, Link } from "react-router-dom";
 import { Unemployment } from "@/components/gradgate/Unemployment";
 import { getPosts } from "@/store/posts";
-import { Calendar as Day } from "@/components/ui/calendar";
+import { CustomCalendar as Day } from "@/components/ui/custom-calendar";
 import { Input } from "@/components/ui/input";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { getProjects } from "@/store/projects";
-import { addTask, getTasks, toggleTask } from "@/store/tasks";
+import { addTask, getTasks, toggleTask, deleteTask } from "@/store/tasks";
 import { updateProjectProgress } from "@/store/projects";
 import { addEvent, eventsForDate, getEvents, removeEvent } from "@/store/events";
+import { getApplications } from "@/store/app";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { 
+  User, 
+  Briefcase, 
+  Calendar, 
+  CheckCircle, 
+  Clock, 
+  TrendingUp, 
+  Bell, 
+  MessageCircle,
+  Target,
+  BarChart3,
+  Star,
+  Plus,
+  ArrowRight
+} from "lucide-react";
 
 export default function Overview() {
   const { user } = useAuth();
@@ -34,7 +53,18 @@ export default function Overview() {
 
   // State for projects to enable re-rendering
   const [projects, setProjects] = useState(getProjects());
-  const [tasks, setTasks] = useState(getTasks());
+  const [tasks, setTasks] = useState(getTasks(user?.id));
+  
+  // Application statistics - user-specific
+  const applications = getApplications(user?.id);
+  const pendingApplications = applications.filter(app => app.status === "PENDING").length;
+  const approvedApplications = applications.filter(app => app.status === "APPROVED").length;
+  const declinedApplications = applications.filter(app => app.status === "DECLINE").length;
+
+  // Refresh data when user changes
+  useEffect(() => {
+    setTasks(getTasks(user?.id));
+  }, [user?.id]);
 
   // Real statistics calculations
   const completedTasks = tasks.filter(t => t.done).length;
@@ -53,179 +83,452 @@ export default function Overview() {
 
   // Function to handle task updates
   const handleTaskToggle = (taskId: string) => {
-    toggleTask(taskId);
-    setTasks(getTasks()); // Update tasks state
+    toggleTask(taskId, user?.id);
+    setTasks(getTasks(user?.id)); // Update tasks state
+  };
+
+  // Function to handle task deletion
+  const handleTaskDelete = (taskId: string) => {
+    deleteTask(taskId, user?.id);
+    setTasks(getTasks(user?.id)); // Update tasks state
   };
 
   return (
-    <section className="relative overflow-hidden">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_80%_at_50%_-20%,hsl(var(--primary)/0.12),transparent_70%)]"
-      />
-      <div className="container mx-auto px-4 py-10 md:py-16">
-        <div className="flex flex-col items-center gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold md:text-3xl">Welcome, {(user?.fullName || "").split(" ")[0] || user?.username || "Student"} 👋</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Here's a quick look at your journey today.</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      {/* Header Section */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5" />
+        <div className="container mx-auto px-6 py-8 relative">
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="rounded-xl border bg-card p-4 shadow-sm"
+            transition={{ duration: 0.6 }}
+            className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6"
           >
+            <div>
+              <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Welcome back, {user?.name || (user?.fullName || "").split(" ")[0] || user?.username || "Student"}! 👋
+              </h1>
+              <p className="mt-2 text-lg text-muted-foreground">
+                Ready to make today productive? Here's your dashboard overview.
+              </p>
+            </div>
+            
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-md bg-primary/10" />
-              <div>
-                <div className="text-sm font-semibold">Quick start</div>
-                <div className="text-xs text-muted-foreground">Add your profile to get tailored matches</div>
-              </div>
-              <Button size="sm" className="ml-auto">Complete profile</Button>
+              <Link to="/dashboard/chat">
+                <Button variant="outline" className="gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Support Chat
+                </Button>
+              </Link>
+              <Link to="/dashboard/opportunities">
+                <Button className="gap-2">
+                  <Briefcase className="h-4 w-4" />
+                  Browse Jobs
+                </Button>
+              </Link>
             </div>
           </motion.div>
-        </div>
 
         {justApplied && (
-          <motion.div initial={{opacity:0}} animate={{opacity:1}} className="mt-6 rounded-lg border border-primary/40 bg-primary/5 p-4 text-sm">
-            🎉 Application sent! Keep an eye on your inbox.
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm"
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-green-800 font-medium">🎉 Application sent! Keep an eye on your inbox.</span>
+              </div>
           </motion.div>
         )}
-
-        <div className="mt-6 flex items-center justify-between gap-3">
-          <Input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search announcements..." className="max-w-sm" />
-          <Link to="/dashboard/chat" className="text-sm text-primary underline">Open Support Chat</Link>
         </div>
+      </div>
 
-        <div className="mt-8 grid gap-6 md:grid-cols-4">
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <img src="https://i.pravatar.cc/100?img=5" alt="avatar" className="h-12 w-12 rounded-full" />
-              <div>
-                <div className="text-sm font-semibold">{user?.fullName || user?.username || "Student"}</div>
-                <div className="text-xs text-muted-foreground">{user?.email || "student@gradgate.com"}</div>
+      {/* Main Dashboard Content */}
+      <div className="container mx-auto px-6 pb-12">
+        {/* Stats Overview */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-600">Total Applications</p>
+                  <p className="text-3xl font-bold text-blue-900">{applications.length}</p>
+                </div>
+                <div className="h-12 w-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                  <Briefcase className="h-6 w-6 text-white" />
+                </div>
               </div>
-            </div>
-            <div className="mt-4 text-xs text-muted-foreground">Status: Available</div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="col-span-3 grid gap-4 sm:grid-cols-3">
-            {projects.map(p => (
-              <div key={p.id} className="rounded-xl border bg-card p-4 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+              <div>
+                  <p className="text-sm font-medium text-green-600">Completed Tasks</p>
+                  <p className="text-3xl font-bold text-green-900">{completedTasks}</p>
+                </div>
+                <div className="h-12 w-12 bg-green-500 rounded-xl flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-600">Active Projects</p>
+                  <p className="text-3xl font-bold text-purple-900">{totalProjects}</p>
+                </div>
+                <div className="h-12 w-12 bg-purple-500 rounded-xl flex items-center justify-center">
+                  <Target className="h-6 w-6 text-white" />
+            </div>
+          </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 to-orange-100">
+            <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold">{p.name}</div>
-                  <div className={`h-2 w-2 rounded-full ${p.color}`} />
+                <div>
+                  <p className="text-sm font-medium text-orange-600">Progress</p>
+                  <p className="text-3xl font-bold text-orange-900">{overallProgress}%</p>
                 </div>
-                <div className="mt-3 h-2 w-full overflow-hidden rounded bg-muted">
-                  <div className={`h-full ${p.color} transition-all duration-300`} style={{ width: `${Math.round((p.completed/p.tasks)*100)}%` }} />
+                <div className="h-12 w-12 bg-orange-500 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-white" />
                 </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">{p.completed} / {p.tasks} tasks</div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - User Profile & Tasks */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* User Profile Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Profile Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center">
+                      <span className="text-white font-bold text-2xl">
+                        {user?.name ? user.name.charAt(0).toUpperCase() : (user?.surname ? user.surname.charAt(0).toUpperCase() : 'U')}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold">
+                        {user?.name && user?.surname ? `${user.name} ${user.surname}` : user?.fullName || user?.username || "Student"}
+                      </h3>
+                      <p className="text-muted-foreground">
+                        {user?.role === 'USER' ? 'Student' : user?.role || 'User'} • Available
+                      </p>
+                      <div className="mt-2">
+                        <Badge className="bg-green-100 text-green-800">Active</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Projects Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Active Projects
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {projects.length > 0 ? (
+                    <div className="grid gap-4">
+                      {projects.map(p => (
+                        <div key={p.id} className="p-4 rounded-xl border bg-gradient-to-r from-slate-50 to-white hover:shadow-md transition-all duration-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold">{p.name}</h4>
+                            <Badge className={`${p.color === 'bg-blue-500' ? 'bg-blue-100 text-blue-800' : p.color === 'bg-green-500' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
+                              {Math.round((p.completed/p.tasks)*100)}%
+                            </Badge>
+                          </div>
+                          <Progress value={(p.completed/p.tasks)*100} className="h-2 mb-3" />
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">{p.completed} / {p.tasks} tasks completed</span>
                   <div className="flex gap-1">
-                    <button 
+                              <Button 
+                                size="sm" 
+                                variant="outline"
                       onClick={() => handleProjectProgressUpdate(p.id, Math.max(0, p.completed - 1))}
-                      className="w-6 h-6 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-xs"
                       disabled={p.completed <= 0}
-                    >
-                      -
-                    </button>
-                    <button 
+                                className="h-7 w-7 p-0"
+                              >
+                                -
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
                       onClick={() => handleProjectProgressUpdate(p.id, Math.min(p.tasks, p.completed + 1))}
-                      className="w-6 h-6 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-xs"
                       disabled={p.completed >= p.tasks}
+                                className="h-7 w-7 p-0"
                     >
                       +
-                    </button>
+                              </Button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No active projects yet</p>
+                      <p className="text-sm">Start a new project to track your progress</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
         </div>
 
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <div className="text-sm font-semibold">Tasks for today</div>
-            <form className="mt-3 flex gap-2" onSubmit={(e)=>{ e.preventDefault(); const f = e.target as HTMLFormElement; const input = f.elements.namedItem('newtask') as HTMLInputElement; if (input.value.trim()) { addTask(input.value); setTasks(getTasks()); input.value=''; e.currentTarget.reset(); } }}>
-              <Input name="newtask" placeholder="Add a task" />
-              <Button type="submit" variant="secondary">Add</Button>
+          {/* Right Column - Tasks & Quick Actions */}
+          <div className="space-y-6">
+            {/* Tasks Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    Today's Tasks
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form className="mb-4 flex gap-2" onSubmit={(e)=>{ 
+                    e.preventDefault(); 
+                    const f = e.target as HTMLFormElement; 
+                    const input = f.elements.namedItem('newtask') as HTMLInputElement; 
+                    if (input.value.trim()) { 
+                      addTask(input.value, user?.id); 
+                      setTasks(getTasks(user?.id)); 
+                      input.value=''; 
+                      e.currentTarget.reset(); 
+                    } 
+                  }}>
+                    <Input name="newtask" placeholder="Add a task..." className="flex-1" />
+                    <Button type="submit" size="sm" className="gap-1">
+                      <Plus className="h-4 w-4" />
+                    </Button>
             </form>
-            <ul className="mt-3 space-y-2 text-sm">
+                  
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
               {tasks.map(t => (
-                <li key={t.id} className="flex items-center gap-2">
-                  <input type="checkbox" checked={t.done} onChange={() => handleTaskToggle(t.id)} />
-                  <span className={t.done?"line-through text-muted-foreground":""}>{t.title}</span>
-                </li>
-              ))}
-            </ul>
+                      <div key={t.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <input 
+                          type="checkbox" 
+                          checked={t.done} 
+                          onChange={() => handleTaskToggle(t.id)}
+                          className="rounded border-2"
+                        />
+                        <span className={`flex-1 text-sm ${t.done ? "line-through text-muted-foreground" : ""}`}>
+                          {t.title}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {t.done && <CheckCircle className="h-4 w-4 text-green-500" />}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleTaskDelete(t.id)}
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {tasks.length === 0 && (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No tasks yet</p>
+                        <p className="text-xs">Add your first task above</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <div className="text-sm font-semibold">Statistics</div>
-            <div className="mt-3 grid grid-cols-3 gap-3 text-center text-xs">
-              <div className="rounded-lg border p-3">
-                <div className="text-xl font-bold">{completedTasks}</div>
-                <div className="text-muted-foreground">Completed tasks</div>
+        </div>
+
+        {/* Bottom Section - Applications & Announcements */}
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Application Status Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+          >
+            <Card className="border-0 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Application Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-5 w-5 text-yellow-600" />
+                      <span className="font-medium text-yellow-800">Pending</span>
+                    </div>
+                    <div className="text-2xl font-bold text-yellow-900">{pendingApplications}</div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-200">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-green-800">Approved</span>
+                    </div>
+                    <div className="text-2xl font-bold text-green-900">{approvedApplications}</div>
               </div>
-              <div className="rounded-lg border p-3">
-                <div className="text-xl font-bold">{completedProjects}</div>
-                <div className="text-muted-foreground">Finished projects</div>
+                  
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-red-50 border border-red-200">
+                    <div className="flex items-center gap-3">
+                      <span className="h-5 w-5 text-red-600">✗</span>
+                      <span className="font-medium text-red-800">Declined</span>
               </div>
-              <div className="rounded-lg border p-3">
-                <div className="text-xl font-bold">{overallProgress}%</div>
-                <div className="text-muted-foreground">Overall progress</div>
+                    <div className="text-2xl font-bold text-red-900">{declinedApplications}</div>
               </div>
             </div>
-            <div className="mt-4">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Project Progress</span>
-                <span>{completedProjectTasks}/{totalProjectTasks}</span>
+                
+                {applications.length > 0 && (
+                  <div className="mt-6">
+                    <Link to="/dashboard/applications">
+                      <Button variant="outline" className="w-full gap-2">
+                        View All Applications
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Announcements Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+          >
+            <Card className="border-0 shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  Announcements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 max-h-64 overflow-y-auto">
+                  {getPosts().filter(p=> (p.title+" "+p.body).toLowerCase().includes(search.toLowerCase())).map((p)=> (
+                    <div key={p.id} className="p-4 rounded-lg border bg-gradient-to-r from-slate-50 to-white hover:shadow-sm transition-shadow">
+                      <div className="flex items-start gap-3">
+                        <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Bell className="h-4 w-4 text-primary" />
               </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-primary h-2 rounded-full transition-all duration-300" 
-                  style={{ width: `${overallProgress}%` }}
-                />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm">{p.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(p.createdAt).toLocaleString()} • {p.author}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{p.body}</p>
               </div>
             </div>
-          </div>
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <div className="text-sm font-semibold">Announcements</div>
-            <div className="mt-3 space-y-3">
-              {getPosts().filter(p=> (p.title+" "+p.body).toLowerCase().includes(search.toLowerCase())).map((p)=> (
-                <div key={p.id} className="rounded-md border p-3">
-                  <div className="text-sm font-medium">{p.title}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleString()} • {p.author}</div>
-                  <p className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">{p.body}</p>
                 </div>
               ))}
               {getPosts().length === 0 && (
-                <p className="text-sm text-muted-foreground">No announcements yet.</p>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No announcements yet</p>
+                      <p className="text-sm">Check back later for updates</p>
+                    </div>
               )}
             </div>
-          </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
 
-        {/* Calendar section (matches Calendar page sans Todos) */}
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <div className="text-sm font-semibold">Upcoming Events</div>
-            <ul className="mt-4 space-y-3 text-sm">
+        {/* Calendar Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="mt-8"
+        >
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Calendar & Events
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Upcoming Events */}
+                <div className="lg:col-span-1">
+                  <h4 className="font-semibold mb-4">Upcoming Events</h4>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
               {all
                 .filter(e=> new Date(`${e.date}T${e.time??"00:00"}`) >= new Date())
                 .sort((a,b)=> +new Date(`${a.date}T${a.time??"00:00"}`) - +new Date(`${b.date}T${b.time??"00:00"}`))
                 .slice(0,4)
                 .map(e=> (
-                  <li key={e.id} className="rounded-lg border p-4">
+                        <div key={e.id} className="p-3 rounded-lg border bg-gradient-to-r from-slate-50 to-white">
                     <div className="text-xs text-muted-foreground">{e.date} {e.time??"All day"}</div>
-                    <div className="mt-1 font-semibold">{e.title}</div>
+                          <div className="mt-1 font-semibold text-sm">{e.title}</div>
                     <div className="mt-1 text-xs text-muted-foreground">Reminder</div>
-                  </li>
-                ))}
-              {all.length===0 && <li className="text-sm text-muted-foreground">No upcoming events.</li>}
-            </ul>
-            <div className="mt-5">
-              <div className="text-sm font-semibold">Add Event</div>
-              <form className="mt-2 grid grid-cols-3 gap-2" onSubmit={(e)=>{
+                        </div>
+                      ))}
+                    {all.length===0 && (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No upcoming events</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Add Event Form */}
+                  <div className="mt-6">
+                    <h4 className="font-semibold mb-3">Add Event</h4>
+                    <form className="space-y-2" onSubmit={(e)=>{
                 e.preventDefault();
                 if (!eventTitle.trim()) return;
                 const dateStr = selected ? dateKey(selected) : dateKey(new Date());
@@ -233,48 +536,82 @@ export default function Overview() {
                 setEventTitle("");
                 setEventTime("");
               }}>
-                <input placeholder="Title" className="col-span-2 h-9 rounded-md border border-input px-2 text-sm" value={eventTitle} onChange={(e)=>setEventTitle(e.target.value)} />
-                <input placeholder="10:00" className="h-9 rounded-md border border-input px-2 text-sm" value={eventTime} onChange={(e)=>setEventTime(e.target.value)} />
-                <div className="col-span-3"><Button type="submit" className="h-9 px-3 text-xs">Add</Button></div>
+                      <Input placeholder="Event title" value={eventTitle} onChange={(e)=>setEventTitle(e.target.value)} />
+                      <Input placeholder="Time (e.g., 10:00)" value={eventTime} onChange={(e)=>setEventTime(e.target.value)} />
+                      <Button type="submit" className="w-full gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Event
+                      </Button>
               </form>
             </div>
           </div>
 
-          <div className="rounded-xl border bg-card p-6 shadow-sm md:col-span-2">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-semibold">{selected ? selected.toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "Calendar"}</div>
+                {/* Calendar */}
+                <div className="lg:col-span-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold">
+                      {selected ? selected.toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "Calendar"}
+                    </h4>
               <div className="flex gap-2">
-                <button onClick={()=>setView("week")} className={`rounded-md border px-3 py-1 text-xs ${view==='week'?"bg-primary text-primary-foreground":""}`}>Week</button>
-                <button onClick={()=>setView("day")} className={`rounded-md border px-3 py-1 text-xs ${view==='day'?"bg-primary text-primary-foreground":""}`}>Day</button>
-                <button onClick={()=>setView("month")} className={`rounded-md border px-3 py-1 text-xs ${view==='month'?"bg-primary text-primary-foreground":""}`}>Month</button>
+                      <Button size="sm" variant="outline" onClick={()=>{setSelected(today);}}>Today</Button>
+                      <Button size="sm" variant={view==='week'?"default":"outline"} onClick={()=>setView("week")}>Week</Button>
+                      <Button size="sm" variant={view==='day'?"default":"outline"} onClick={()=>setView("day")}>Day</Button>
+                      <Button size="sm" variant={view==='month'?"default":"outline"} onClick={()=>setView("month")}>Month</Button>
               </div>
             </div>
+                  
             <div className="flex justify-center">
-              <Day mode="single" selected={selected} onSelect={setSelected} />
+              <div className="rounded-md border bg-card">
+                <Day 
+                  selected={selected} 
+                  onSelect={setSelected}
+                />
+              </div>
             </div>
+                  
             {selected && (
               <div className="mt-4">
-                <div className="text-sm font-semibold">Events on {dateKey(selected)}</div>
-                <ul className="mt-2 space-y-2 text-sm">
+                      <h5 className="font-semibold mb-3">Events on {dateKey(selected)}</h5>
+                      <div className="space-y-2">
                   {sel.map(e=> (
-                    <li key={e.id} className="flex items-center justify-between rounded-md border p-2">
+                          <div key={e.id} className="flex items-center justify-between p-3 rounded-lg border bg-gradient-to-r from-slate-50 to-white">
                       <div>
                         <div className="text-xs text-muted-foreground">{e.date} {e.time??"All day"}</div>
-                        <div className="font-medium">{e.title}</div>
+                              <div className="font-medium text-sm">{e.title}</div>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={()=>{ removeEvent(e.id); setSelected(new Date(e.date)); }}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        ))}
+                        {sel.length===0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            No events on this date
+                          </div>
+                        )}
                       </div>
-                      <button className="rounded-md border px-2 py-1 text-xs" onClick={()=>{ removeEvent(e.id); setSelected(new Date(e.date)); }}>Delete</button>
-                    </li>
-                  ))}
-                  {sel.length===0 && <li className="text-xs text-muted-foreground">No events.</li>}
-                </ul>
               </div>
             )}
           </div>
         </div>
-        <div className="mt-10">
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Unemployment Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="mt-8"
+        >
           <Unemployment />
-        </div>
+        </motion.div>
       </div>
-    </section>
+    </div>
   );
 }

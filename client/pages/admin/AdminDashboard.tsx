@@ -2,11 +2,18 @@ import { getApplications, type Application } from "@/store/app";
 import { type JobPost } from "@/store/jobs";
 import { Link, NavLink } from "react-router-dom";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend, Bar, BarChart } from "recharts";
-import { BarChart2, Briefcase, LayoutDashboard, MessageSquare, Newspaper, ChevronLeft, GraduationCap, Users, FileCheck, Calendar, Mic, User, Settings, MessageCircle } from "lucide-react";
+import { 
+  BarChart2, Briefcase, LayoutDashboard, MessageSquare, Newspaper, ChevronLeft, 
+  GraduationCap, Users, FileCheck, Calendar, Mic, User, Settings, MessageCircle,
+  Plus, Search, Filter, Eye, Edit, Trash2, CheckCircle, XCircle, Clock,
+  TrendingUp, Building2, UserCheck, AlertCircle, RefreshCw
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { addPost, getPosts, removePost, type Post } from "@/store/posts";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 
@@ -169,13 +176,22 @@ export default function AdminDashboard() {
         if (!response.ok) {
           let errorDetails = "";
           try {
-            const errorData = await response.json();
-            console.log("Error response data:", errorData);
-            errorDetails = errorData.message || errorData.error || "";
+            const responseText = await response.text();
+            console.log("Error response text:", responseText);
+            
+            // Try to parse as JSON if it looks like JSON
+            if (responseText.startsWith('{') || responseText.startsWith('[')) {
+              try {
+                const errorData = JSON.parse(responseText);
+                errorDetails = errorData.message || errorData.error || responseText;
+              } catch {
+                errorDetails = responseText;
+              }
+            } else {
+              errorDetails = responseText;
+            }
           } catch (e) {
-            const textResponse = await response.text();
-            console.log("Error response text:", textResponse);
-            errorDetails = textResponse;
+            errorDetails = `HTTP ${response.status}: ${response.statusText}`;
           }
           throw new Error(`Failed to fetch applications: ${response.status} - ${errorDetails}`);
         }
@@ -258,8 +274,13 @@ export default function AdminDashboard() {
       if (!response.ok) {
         let errorMessage = `Failed to update status (${response.status})`;
         try {
-          const errorData = await response.json();
-          if (errorData?.message) errorMessage = errorData.message;
+          const responseText = await response.text();
+          if (responseText.startsWith('{') || responseText.startsWith('[')) {
+            const errorData = JSON.parse(responseText);
+            if (errorData?.message) errorMessage = errorData.message;
+          } else {
+            errorMessage = responseText;
+          }
         } catch {}
         throw new Error(errorMessage);
       }
@@ -386,9 +407,14 @@ export default function AdminDashboard() {
       if (!response.ok) {
         let errorMessage = `Job creation failed (${response.status})`;
         try {
-          const errorData = await response.json();
-          if (errorData?.message) errorMessage = errorData.message;
-          if (errorData?.error) errorMessage = errorData.error;
+          const responseText = await response.text();
+          if (responseText.startsWith('{') || responseText.startsWith('[')) {
+            const errorData = JSON.parse(responseText);
+            if (errorData?.message) errorMessage = errorData.message;
+            if (errorData?.error) errorMessage = errorData.error;
+          } else {
+            errorMessage = responseText;
+          }
         } catch {}
         throw new Error(errorMessage);
       }
@@ -444,9 +470,14 @@ export default function AdminDashboard() {
       if (!response.ok) {
         let errorMessage = `Job update failed (${response.status})`;
         try {
-          const errorData = await response.json();
-          if (errorData?.message) errorMessage = errorData.message;
-          if (errorData?.error) errorMessage = errorData.error;
+          const responseText = await response.text();
+          if (responseText.startsWith('{') || responseText.startsWith('[')) {
+            const errorData = JSON.parse(responseText);
+            if (errorData?.message) errorMessage = errorData.message;
+            if (errorData?.error) errorMessage = errorData.error;
+          } else {
+            errorMessage = responseText;
+          }
         } catch {}
         throw new Error(errorMessage);
       }
@@ -554,9 +585,14 @@ export default function AdminDashboard() {
       if (!response.ok) {
         let errorMessage = `Job deletion failed (${response.status})`;
         try {
-          const errorData = await response.json();
-          if (errorData?.message) errorMessage = errorData.message;
-          if (errorData?.error) errorMessage = errorData.error;
+          const responseText = await response.text();
+          if (responseText.startsWith('{') || responseText.startsWith('[')) {
+            const errorData = JSON.parse(responseText);
+            if (errorData?.message) errorMessage = errorData.message;
+            if (errorData?.error) errorMessage = errorData.error;
+          } else {
+            errorMessage = responseText;
+          }
         } catch {}
         throw new Error(errorMessage);
       }
@@ -622,27 +658,114 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex">
       <AdminSidebar />
       <div className="flex-1 overflow-auto">
         <div id="top" className="p-6">
-          <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <Link to="/admin/chat" className="text-sm text-primary underline">Open Chat</Link>
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  Admin Dashboard
+                </h1>
+                <p className="text-slate-600 mt-1">Welcome back, {admin.name}! Here's what's happening today.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  variant="outline" 
+                  size="sm"
+                  className="gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </Button>
+                <Link to="/admin/chat">
+                  <Button className="gap-2">
+                    <MessageCircle className="w-4 h-4" />
+                    Chat
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Stats Overview */}
+            <div className="grid gap-6 md:grid-cols-4 mb-8">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-600">Total Applications</p>
+                      <p className="text-3xl font-bold text-blue-900">{applications.length}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                      <FileCheck className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-600">Approved</p>
+                      <p className="text-3xl font-bold text-green-900">
+                        {applications.filter(app => app.status === "APPROVED").length}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-yellow-100">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-yellow-600">Pending</p>
+                      <p className="text-3xl font-bold text-yellow-900">
+                        {applications.filter(app => app.status === "PENDING").length}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
+                      <Clock className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-red-600">Declined</p>
+                      <p className="text-3xl font-bold text-red-900">
+                        {applications.filter(app => app.status === "DECLINE").length}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">
+                      <XCircle className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        {[{label:'App Downloads', value:5938}, {label:'Enrolled Schools', value:3623}, {label:'Enrolled Users', value:2341}, {label:'Revenue', value:'$69.2k'}].map((k)=> (
-          <div key={k.label} className="rounded-xl border bg-card p-5 shadow-sm">
-            <div className="text-xs text-muted-foreground">{k.label}</div>
-            <div className="mt-2 text-2xl font-bold">{k.value}</div>
-          </div>
-        ))}
-      </div>
-
-      <div id="jobs-post" className="mt-8 rounded-xl border bg-card p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Post a job</h2>
-        <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={async (e)=>{
+          {/* Job Posting Section */}
+          <Card className="border-0 shadow-lg mb-8" id="jobs-post">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-purple-600" />
+                Create New Job Posting
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form className="space-y-6" onSubmit={async (e)=>{
           e.preventDefault();
           if (!jobTitle.trim() || !jobDescription.trim()) return;
           
@@ -703,42 +826,100 @@ export default function AdminDashboard() {
             setJobSubmitting(false);
           }
         }}>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Title</label>
-            <Input value={jobTitle} onChange={(e)=>setJobTitle(e.target.value)} placeholder="e.g. Frontend Intern" required />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Company</label>
-            <Input value={jobCompany} onChange={(e)=>setJobCompany(e.target.value)} placeholder="e.g. GradGate Labs" required />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Location</label>
-            <Input value={jobLocation} onChange={(e)=>setJobLocation(e.target.value)} placeholder="e.g. Remote / Johannesburg" required />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Type</label>
-            <select className="h-9 w-full rounded-md border border-input bg-background px-2" value={jobType} onChange={(e)=>setJobType(e.target.value)}>
-              {['Internship','Learnership','Full-time','Part-time','Contract'].map(t=> (<option key={t}>{t}</option>))}
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium">Description</label>
-            <Textarea value={jobDescription} onChange={(e)=>setJobDescription(e.target.value)} placeholder="Describe the role and responsibilities." required />
-          </div>
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium">Requirements</label>
-            <Textarea value={jobRequirements} onChange={(e)=>setJobRequirements(e.target.value)} placeholder="List the specific requirements, skills, and qualifications needed." />
-          </div>
-          {jobError && (
-            <div className="md:col-span-2 text-sm text-destructive">{jobError}</div>
-          )}
-          <div className="md:col-span-2">
-            <Button type="submit" disabled={jobSubmitting}>
-              {jobSubmitting ? "Publishing..." : "Publish job"}
-            </Button>
-          </div>
-        </form>
-      </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Job Title *</label>
+                    <Input 
+                      placeholder="e.g. Frontend Intern" 
+                      value={jobTitle} 
+                      onChange={(e)=>setJobTitle(e.target.value)} 
+                      required 
+                      className="border-gray-200 focus:border-purple-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Company *</label>
+                    <Input 
+                      placeholder="e.g. GradGate Labs" 
+                      value={jobCompany} 
+                      onChange={(e)=>setJobCompany(e.target.value)} 
+                      required
+                      className="border-gray-200 focus:border-purple-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Location *</label>
+                    <Input 
+                      placeholder="e.g. Remote / Johannesburg" 
+                      value={jobLocation} 
+                      onChange={(e)=>setJobLocation(e.target.value)} 
+                      required
+                      className="border-gray-200 focus:border-purple-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Job Type</label>
+                    <select 
+                      className="w-full h-10 rounded-md border border-gray-200 bg-background px-3 focus:border-purple-500 focus:outline-none" 
+                      value={jobType} 
+                      onChange={(e)=>setJobType(e.target.value)}
+                    >
+                      {['Internship','Learnership','Full-time','Part-time','Contract'].map(t=> (<option key={t}>{t}</option>))}
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Job Description *</label>
+                  <Textarea 
+                    placeholder="Describe the role, responsibilities, and what makes this opportunity exciting..." 
+                    value={jobDescription} 
+                    onChange={(e)=>setJobDescription(e.target.value)} 
+                    required 
+                    className="min-h-[120px] border-gray-200 focus:border-purple-500"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Requirements (Optional)</label>
+                  <Textarea 
+                    placeholder="List the skills, qualifications, and experience required..." 
+                    value={jobRequirements} 
+                    onChange={(e)=>setJobRequirements(e.target.value)} 
+                    className="min-h-[100px] border-gray-200 focus:border-purple-500"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between pt-4">
+                  <div className="flex items-center gap-4">
+                    {jobError && (
+                      <div className="flex items-center gap-2 text-red-600 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        {jobError}
+                      </div>
+                    )}
+                  </div>
+                  <Button 
+                    type="submit" 
+                    disabled={jobSubmitting}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                  >
+                    {jobSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Publishing...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Publish Job
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
 
       {/* Edit Job Form */}
       {editingJob && (
@@ -1029,18 +1210,27 @@ export default function AdminDashboard() {
         <p className="mt-3 text-xs text-muted-foreground">Student view: <Link to="/dashboard" className="text-primary underline">open dashboard</Link></p>
         </div>
 
-        {/* Applications Section */}
-        <div id="applications" className="mt-8 rounded-xl border bg-card p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">All Applications</h2>
-            <button
-              onClick={refreshApplications}
-              disabled={loading}
-              className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
-          </div>
+          {/* Applications Section */}
+          <Card className="border-0 shadow-lg mb-8" id="applications">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  Job Applications Management
+                </CardTitle>
+                <Button
+                  onClick={refreshApplications}
+                  disabled={loading}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  {loading ? "Refreshing..." : "Refresh"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-secondary/50 text-muted-foreground">
@@ -1116,10 +1306,9 @@ export default function AdminDashboard() {
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-        </div>
-      </div>
+              </div>
+            </CardContent>
+          </Card>
 
       {/* Application Details Modal */}
       {selectedApplication && (
@@ -1235,6 +1424,8 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

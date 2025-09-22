@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
-import { Calendar as Day } from "@/components/ui/calendar";
+import { useMemo, useState, useEffect } from "react";
+import { CustomCalendar as Day } from "@/components/ui/custom-calendar";
 import { getEvents, eventsForDate, addEvent, removeEvent } from "@/store/events";
-import { getTasks, addTask, toggleTask } from "@/store/tasks";
+import { getTasks, addTask, toggleTask, deleteTask } from "@/store/tasks";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
 export default function CalendarPage() {
+  const { user } = useAuth();
   const today = new Date();
   const [selected, setSelected] = useState<Date | undefined>(today);
   const all = getEvents();
@@ -24,10 +26,15 @@ export default function CalendarPage() {
   const timeToNext = next ? Math.max(0, Math.floor((+next.t - +new Date())/60000)) : null;
 
   const [todoInput, setTodoInput] = useState("");
-  const [tasks, setTasks] = useState(getTasks());
+  const [tasks, setTasks] = useState(getTasks(user?.id));
   const [eventTitle, setEventTitle] = useState("");
   const [eventTime, setEventTime] = useState("");
   const [view, setView] = useState<"day"|"week"|"month">("month");
+
+  // Refresh data when user changes
+  useEffect(() => {
+    setTasks(getTasks(user?.id));
+  }, [user?.id]);
 
   return (
     <section className="py-8">
@@ -69,13 +76,19 @@ export default function CalendarPage() {
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm font-semibold">{selected ? selected.toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "Calendar"}</div>
             <div className="flex gap-2">
+              <button onClick={()=>{setSelected(today);}} className="rounded-md border px-3 py-1 text-xs hover:bg-muted">Today</button>
               <button onClick={()=>setView("week")} className={`rounded-md border px-3 py-1 text-xs ${view==='week'?"bg-primary text-primary-foreground":""}`}>Week</button>
               <button onClick={()=>setView("day")} className={`rounded-md border px-3 py-1 text-xs ${view==='day'?"bg-primary text-primary-foreground":""}`}>Day</button>
               <button onClick={()=>setView("month")} className={`rounded-md border px-3 py-1 text-xs ${view==='month'?"bg-primary text-primary-foreground":""}`}>Month</button>
             </div>
           </div>
           <div className="flex justify-center">
-            <Day mode="single" selected={selected} onSelect={setSelected} />
+            <div className="rounded-md border bg-card">
+              <Day 
+                selected={selected} 
+                onSelect={setSelected}
+              />
+            </div>
           </div>
           {selected && (
             <div className="mt-4">
@@ -98,17 +111,25 @@ export default function CalendarPage() {
 
         <div className="rounded-xl border bg-card p-6 shadow-sm md:col-span-1">
           <div className="text-sm font-semibold">Todos</div>
-          <form className="mt-3 flex gap-2" onSubmit={(e)=>{e.preventDefault(); if (!todoInput.trim()) return; setTasks(addTask(todoInput)); setTodoInput("");}}>
+          <form className="mt-3 flex gap-2" onSubmit={(e)=>{e.preventDefault(); if (!todoInput.trim()) return; setTasks(addTask(todoInput, user?.id)); setTodoInput("");}}>
             <input value={todoInput} onChange={(e)=>setTodoInput(e.target.value)} placeholder="Add a todo" className="h-9 flex-1 rounded-md border border-input px-2 text-sm" />
             <Button type="submit" className="h-9 px-3 text-xs">Add</Button>
           </form>
           <ul className="mt-3 space-y-2 text-sm">
             {tasks.map(t=> (
               <li key={t.id} className="flex items-center justify-between rounded-md border p-2">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={t.done} onChange={()=>setTasks(toggleTask(t.id))} />
+                <label className="flex items-center gap-2 flex-1">
+                  <input type="checkbox" checked={t.done} onChange={()=>setTasks(toggleTask(t.id, user?.id))} />
                   <span className={t.done?"line-through text-muted-foreground":""}>{t.title}</span>
                 </label>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setTasks(deleteTask(t.id, user?.id))}
+                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  ×
+                </Button>
               </li>
             ))}
           </ul>

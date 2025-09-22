@@ -1,11 +1,13 @@
 import { Outlet, NavLink } from "react-router-dom";
 import { useState } from "react";
 import { companies } from "@/data/companies";
-import { ChevronLeft, BarChart3, FileCheck, Briefcase, GraduationCap, Map, Users, Calendar, Mic, User, MessageCircle, Settings } from "lucide-react";
+import { ChevronLeft, BarChart3, FileCheck, Briefcase, GraduationCap, Map, Users, Calendar, Mic, User, MessageCircle, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 //import { Clock } from "@/components/gradgate/Clock";
 
 function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const { user, logout } = useAuth();
   
   const navItem = (to: string, label: string, icon: React.ReactNode) => (
     <NavLink 
@@ -59,6 +61,42 @@ function Sidebar() {
         {navItem('/dashboard/profile', 'Profile & Settings', <User className="w-5 h-5" />)}
         {navItem('/dashboard/chat', 'Support Chat', <MessageCircle className="w-5 h-5" />)}
       </nav>
+
+      {/* User Profile Section */}
+      <div className="border-t border-purple-200 p-4">
+        {!collapsed ? (
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-semibold text-sm">
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-purple-900 font-semibold text-sm truncate">
+                {user?.name && user?.surname ? `${user.name} ${user.surname}` : user?.fullName || user?.username || 'User'}
+              </div>
+              <div className="text-purple-600 text-xs truncate">
+                {user?.role === 'USER' ? 'Student' : user?.role || 'User'}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-center mb-3">
+            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-semibold text-sm">
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </span>
+            </div>
+          </div>
+        )}
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-4 py-2 text-purple-700 hover:bg-purple-50 hover:text-purple-900 rounded-lg transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          {!collapsed && <span className="text-sm">Logout</span>}
+        </button>
+      </div>
     </aside>
   );
 }

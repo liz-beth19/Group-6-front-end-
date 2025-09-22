@@ -13,6 +13,10 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState<string | null>(null);
 
   return (
     <div className="relative min-h-[calc(100vh-64px)]">
@@ -54,8 +58,6 @@ export default function Login() {
                 const data = await res.json();
                 
                 const role = (data?.role || "").toString().toUpperCase();
-                console.log("Login response:", data);
-                console.log("Role:", role);
                 if (role === "ADMIN") {
                   console.log("Setting admin from API...");
                   await setAdminFromApi(data?.username || email, data?.token);
@@ -69,7 +71,15 @@ export default function Login() {
                   if (!ok) {
                     
                     const fullName = [data?.name, data?.surname].filter(Boolean).join(" ");
-                    setUserFromApi({ username: data?.username || email, email: data?.email || email, fullName: fullName || undefined });
+                    setUserFromApi({ 
+                      username: data?.username || email, 
+                      email: data?.email || email, 
+                      fullName: fullName || undefined,
+                      name: data?.name,
+                      surname: data?.surname,
+                      id: data?.id,
+                      role: data?.role
+                    });
                   }
                 }
               } catch (err: any) {
@@ -105,9 +115,94 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>{loading ? "Loading…" : "Log in"}</Button>
           </form>
           
-          <p className="mt-3 text-center text-sm text-muted-foreground">
-            New to GradGate? <Link to="/register" className="text-primary hover:underline">Create an account</Link>
-          </p>
+          {!showForgotPassword ? (
+            <>
+              <p className="mt-3 text-center text-sm text-muted-foreground">
+                New to GradGate? <Link to="/register" className="text-primary hover:underline">Create an account</Link>
+              </p>
+              <p className="mt-2 text-center text-sm">
+                <button 
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-primary hover:underline"
+                >
+                  Forgot your password?
+                </button>
+              </p>
+            </>
+          ) : (
+            <div className="mt-6 space-y-4">
+              <div className="text-center">
+                <h2 className="text-lg font-semibold">Reset Password</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Enter your email address and we'll send you a temporary password.
+                </p>
+              </div>
+              
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setForgotPasswordMessage(null);
+                  setForgotPasswordLoading(true);
+                  try {
+                    const res = await fetch("http://localhost:8080/api/auth/forgot-password", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email: forgotPasswordEmail }),
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                      setForgotPasswordMessage(data.message);
+                    } else {
+                      setForgotPasswordMessage(data.message || "Failed to reset password");
+                    }
+                  } catch (err: any) {
+                    setForgotPasswordMessage("Failed to reset password. Please try again.");
+                  } finally {
+                    setForgotPasswordLoading(false);
+                  }
+                }}
+              >
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={forgotPasswordLoading}>
+                  {forgotPasswordLoading ? "Sending..." : "Send Reset Email"}
+                </Button>
+              </form>
+              
+              {forgotPasswordMessage && (
+                <div className={`text-sm p-3 rounded-md ${
+                  forgotPasswordMessage.includes("successful") 
+                    ? "bg-green-50 text-green-700 border border-green-200" 
+                    : "bg-red-50 text-red-700 border border-red-200"
+                }`}>
+                  {forgotPasswordMessage}
+                </div>
+              )}
+              
+              <p className="text-center text-sm">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotPasswordEmail("");
+                    setForgotPasswordMessage(null);
+                  }}
+                  className="text-primary hover:underline"
+                >
+                  Back to login
+                </button>
+              </p>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

@@ -10,6 +10,7 @@ export type JobPost = {
   createdAt: string; 
 };
 
+
 const JOBS_KEY = "gg_job_posts";
 
 function save(items: JobPost[]) {

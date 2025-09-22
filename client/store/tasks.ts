@@ -2,41 +2,52 @@ export type Task = { id: string; title: string; done: boolean };
 
 const TASKS_KEY = "gg_tasks";
 
-function save(tasks: Task[]) {
-  localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+function getUserKey(userId?: string | number): string {
+  return userId ? `${TASKS_KEY}_${userId}` : TASKS_KEY;
 }
 
-export function getTasks(): Task[] {
+function save(tasks: Task[], userId?: string | number) {
+  localStorage.setItem(getUserKey(userId), JSON.stringify(tasks));
+}
+
+export function getTasks(userId?: string | number): Task[] {
   try {
-    const raw = localStorage.getItem(TASKS_KEY);
-    if (!raw) return seed();
+    const raw = localStorage.getItem(getUserKey(userId));
+    if (!raw) return seed(userId);
     return JSON.parse(raw) as Task[];
   } catch {
-    return seed();
+    return seed(userId);
   }
 }
 
-function seed(): Task[] {
+function seed(userId?: string | number): Task[] {
   const initial: Task[] = [
     { id: "t1", title: "Prepare Figma file", done: false },
     { id: "t2", title: "Design UX wireframes", done: false },
     { id: "t3", title: "Research mobile app", done: true },
   ];
-  save(initial);
+  save(initial, userId);
   return initial;
 }
 
-export function toggleTask(id: string) {
-  const tasks = getTasks();
+export function toggleTask(id: string, userId?: string | number) {
+  const tasks = getTasks(userId);
   const next = tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
-  save(next);
+  save(next, userId);
   return next;
 }
 
-export function addTask(title: string) {
-  const tasks = getTasks();
+export function addTask(title: string, userId?: string | number) {
+  const tasks = getTasks(userId);
   const t: Task = { id: `t_${Date.now()}`, title: title.trim(), done: false };
   const next = [t, ...tasks];
-  save(next);
+  save(next, userId);
+  return next;
+}
+
+export function deleteTask(id: string, userId?: string | number) {
+  const tasks = getTasks(userId);
+  const next = tasks.filter((t) => t.id !== id);
+  save(next, userId);
   return next;
 }

@@ -336,7 +336,7 @@ export default function Apply() {
                 dateApplied: savedApplication.appliedDate,
                 resumeName,
                 resumeDataUrl,
-              });
+              }, user?.id);
 
               navigate("/dashboard/applications", { replace: true, state: { applied: true } });
             } catch (err: any) {

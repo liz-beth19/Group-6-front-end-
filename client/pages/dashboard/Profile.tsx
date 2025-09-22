@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useAuth, companyAddress } from "@/context/AuthContext";
 
 export default function Profile() {
-  const { getProfile, updateProfile } = useAuth();
+  const { getProfile, updateProfile, user } = useAuth();
   const p = getProfile();
   const [username, setUsername] = useState(p.username);
   const [email, setEmail] = useState(p.email);
   const [address, setAddress] = useState(p.address);
+  const [name, setName] = useState(p.name || user?.name || "");
+  const [surname, setSurname] = useState(p.surname || user?.surname || "");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
@@ -26,12 +28,22 @@ export default function Profile() {
                 setError("Passwords do not match");
                 return;
               }
-              updateProfile({ username, email, address, ...(password ? { password } : {}) });
+              updateProfile({ username, email, address, name, surname, ...(password ? { password } : {}) });
               setSaved("Changes saved");
               setPassword("");
               setConfirm("");
             }}
           >
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-semibold">First Name</label>
+                <input value={name} onChange={(e)=>setName(e.target.value)} className="h-10 w-full rounded-md border border-input px-3" required />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold">Last Name</label>
+                <input value={surname} onChange={(e)=>setSurname(e.target.value)} className="h-10 w-full rounded-md border border-input px-3" required />
+              </div>
+            </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Username</label>
               <input value={username} onChange={(e)=>setUsername(e.target.value)} className="h-10 w-full rounded-md border border-input px-3" required />
