@@ -1,9 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
-import { Application, getApplications } from "@/store/app";
+import { Application, getApplications, deleteApplication } from "@/store/app";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
+import { Trash2 } from "lucide-react";
 
 export default function Applications() {
   const { user } = useAuth();
@@ -168,6 +169,15 @@ export default function Applications() {
     }
   }, [user?.id]);
 
+  // Function to handle application deletion
+  const handleDeleteApplication = (appId: string) => {
+    if (window.confirm("Are you sure you want to delete this application?")) {
+      // Delete from local storage
+      const updatedApps = deleteApplication(appId, user?.id);
+      setApps(updatedApps);
+    }
+  };
+
 
   return (
     <section className="py-10 md:py-16">
@@ -247,21 +257,31 @@ export default function Applications() {
                     <td className="px-4 py-3">{a.dateApplied || a.appliedDate}</td>
                     <td className="px-4 py-3">{getStatusBadge(a.status)}</td>
                     <td className="px-4 py-3">
-                      {a.status === "APPROVED" && (
-                        <Button size="sm" variant="outline" className="text-green-600 border-green-200">
-                          View Details
+                      <div className="flex items-center gap-2">
+                        {a.status === "APPROVED" && (
+                          <Button size="sm" variant="outline" className="text-green-600 border-green-200">
+                            View Details
+                          </Button>
+                        )}
+                        {a.status === "PENDING" && (
+                          <Button size="sm" variant="outline" className="text-yellow-600 border-yellow-200">
+                            Check Status
+                          </Button>
+                        )}
+                        {a.status === "DECLINE" && (
+                          <Button size="sm" variant="outline" className="text-red-600 border-red-200">
+                            View Feedback
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteApplication(a.id)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      )}
-                      {a.status === "PENDING" && (
-                        <Button size="sm" variant="outline" className="text-yellow-600 border-yellow-200">
-                          Check Status
-                        </Button>
-                      )}
-                      {a.status === "DECLINE" && (
-                        <Button size="sm" variant="outline" className="text-red-600 border-red-200">
-                          View Feedback
-                        </Button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}

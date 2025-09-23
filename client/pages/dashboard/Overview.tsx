@@ -11,7 +11,8 @@ import { getProjects } from "@/store/projects";
 import { addTask, getTasks, toggleTask, deleteTask } from "@/store/tasks";
 import { updateProjectProgress } from "@/store/projects";
 import { addEvent, eventsForDate, getEvents, removeEvent } from "@/store/events";
-import { getApplications } from "@/store/app";
+import { getApplications, deleteApplication } from "@/store/app";
+import { getUserProjects, addUserProject, updateUserProject, deleteUserProject, UserProject } from "@/store/userProjects";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -28,7 +29,10 @@ import {
   BarChart3,
   Star,
   Plus,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  Edit,
+  X
 } from "lucide-react";
 
 export default function Overview() {
@@ -54,9 +58,20 @@ export default function Overview() {
   // State for projects to enable re-rendering
   const [projects, setProjects] = useState(getProjects());
   const [tasks, setTasks] = useState(getTasks(user?.id));
+  const [userProjects, setUserProjects] = useState(getUserProjects(user?.id));
+  const [showAddProject, setShowAddProject] = useState(false);
+  const [newProject, setNewProject] = useState({
+    name: "",
+    description: "",
+    status: "ACTIVE" as const,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: "",
+    progress: 0,
+    tags: [] as string[],
+  });
   
   // Application statistics - user-specific
-  const applications = getApplications(user?.id);
+  const [applications, setApplications] = useState(getApplications(user?.id));
   const pendingApplications = applications.filter(app => app.status === "PENDING").length;
   const approvedApplications = applications.filter(app => app.status === "APPROVED").length;
   const declinedApplications = applications.filter(app => app.status === "DECLINE").length;
@@ -64,16 +79,22 @@ export default function Overview() {
   // Refresh data when user changes
   useEffect(() => {
     setTasks(getTasks(user?.id));
+    setUserProjects(getUserProjects(user?.id));
+    setApplications(getApplications(user?.id));
   }, [user?.id]);
 
   // Real statistics calculations
   const completedTasks = tasks.filter(t => t.done).length;
   const totalTasks = tasks.length;
-  const totalProjects = projects.length;
-  const completedProjects = projects.filter(p => p.completed === p.tasks).length;
-  const totalProjectTasks = projects.reduce((sum, p) => sum + p.tasks, 0);
-  const completedProjectTasks = projects.reduce((sum, p) => sum + p.completed, 0);
-  const overallProgress = totalProjectTasks > 0 ? Math.round((completedProjectTasks / totalProjectTasks) * 100) : 0;
+  
+  // User projects calculations (only these count now)
+  const totalUserProjects = userProjects.length;
+  const completedUserProjects = userProjects.filter(p => p.progress === 100).length;
+  const totalUserProjectProgress = userProjects.reduce((sum, p) => sum + p.progress, 0);
+  const averageUserProjectProgress = totalUserProjects > 0 ? totalUserProjectProgress / totalUserProjects : 0;
+  
+  // Progress calculation (only user projects)
+  const overallProgress = totalUserProjects > 0 ? Math.round(averageUserProjectProgress) : 0;
 
   // Function to handle project progress updates
   const handleProjectProgressUpdate = (projectId: string, newCompleted: number) => {
@@ -91,6 +112,49 @@ export default function Overview() {
   const handleTaskDelete = (taskId: string) => {
     deleteTask(taskId, user?.id);
     setTasks(getTasks(user?.id)); // Update tasks state
+  };
+
+  // Function to handle application deletion
+  const handleApplicationDelete = (appId: string) => {
+    if (window.confirm("Are you sure you want to delete this application?")) {
+      const updatedApplications = deleteApplication(appId, user?.id);
+      setApplications(updatedApplications);
+    }
+  };
+
+  // Function to handle adding new user project
+  const handleAddProject = () => {
+    if (newProject.name.trim()) {
+      addUserProject(newProject, user?.id);
+      setUserProjects(getUserProjects(user?.id));
+      setApplications(getApplications(user?.id)); // Refresh applications to update progress
+      setNewProject({
+        name: "",
+        description: "",
+        status: "ACTIVE" as const,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: "",
+        progress: 0,
+        tags: [],
+      });
+      setShowAddProject(false);
+    }
+  };
+
+  // Function to handle user project deletion
+  const handleUserProjectDelete = (projectId: string) => {
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      deleteUserProject(projectId, user?.id);
+      setUserProjects(getUserProjects(user?.id));
+      setApplications(getApplications(user?.id)); // Refresh applications to update progress
+    }
+  };
+
+  // Function to handle user project progress update
+  const handleUserProjectProgressUpdate = (projectId: string, newProgress: number) => {
+    updateUserProject(projectId, { progress: Math.max(0, Math.min(100, newProgress)) }, user?.id);
+    setUserProjects(getUserProjects(user?.id));
+    setApplications(getApplications(user?.id)); // Refresh applications to update progress
   };
 
   return (
@@ -187,7 +251,7 @@ export default function Overview() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-purple-600">Active Projects</p>
-                  <p className="text-3xl font-bold text-purple-900">{totalProjects}</p>
+                  <p className="text-3xl font-bold text-purple-900">{totalUserProjects}</p>
                 </div>
                 <div className="h-12 w-12 bg-purple-500 rounded-xl flex items-center justify-center">
                   <Target className="h-6 w-6 text-white" />
@@ -200,8 +264,11 @@ export default function Overview() {
             <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-orange-600">Progress</p>
+                  <p className="text-sm font-medium text-orange-600">Overall Progress</p>
                   <p className="text-3xl font-bold text-orange-900">{overallProgress}%</p>
+                  <p className="text-xs text-orange-700 mt-1">
+                    {totalUserProjects > 0 ? `${totalUserProjects} user projects` : 'No user projects'}
+                  </p>
                 </div>
                 <div className="h-12 w-12 bg-orange-500 rounded-xl flex items-center justify-center">
                   <TrendingUp className="h-6 w-6 text-white" />
@@ -251,7 +318,7 @@ export default function Overview() {
               </Card>
             </motion.div>
 
-            {/* Projects Section */}
+            {/* My Active Projects Section */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -259,31 +326,109 @@ export default function Overview() {
             >
               <Card className="border-0 shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5" />
-                    Active Projects
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5" />
+                      My Active Projects
+                    </CardTitle>
+                    <Button 
+                      onClick={() => setShowAddProject(!showAddProject)}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Project
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    The Active Projects function gives graduates, employers, and institutions a space to connect with real-time opportunities 🌐. It highlights ongoing projects, internships, and collaborations 🎓💼, allowing graduates to gain hands-on experience while employers and institutions track progress and impact 📊. This feature keeps GradGate interactive, practical, and future-focused 🚀.
+                  </p>
                 </CardHeader>
                 <CardContent>
-                  {projects.length > 0 ? (
+                  {/* Add Project Form */}
+                  {showAddProject && (
+                    <div className="mb-6 p-4 rounded-lg border bg-gradient-to-r from-blue-50 to-indigo-50">
+                      <h4 className="font-semibold mb-3">Add New Project</h4>
+                      <div className="space-y-3">
+                        <Input
+                          placeholder="Project name"
+                          value={newProject.name}
+                          onChange={(e) => setNewProject({...newProject, name: e.target.value})}
+                        />
+                        <Input
+                          placeholder="Project description"
+                          value={newProject.description}
+                          onChange={(e) => setNewProject({...newProject, description: e.target.value})}
+                        />
+                        <div className="flex gap-2">
+                          <Input
+                            type="date"
+                            value={newProject.startDate}
+                            onChange={(e) => setNewProject({...newProject, startDate: e.target.value})}
+                            className="flex-1"
+                          />
+                          <Input
+                            type="date"
+                            placeholder="End date (optional)"
+                            value={newProject.endDate}
+                            onChange={(e) => setNewProject({...newProject, endDate: e.target.value})}
+                            className="flex-1"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleAddProject} size="sm">
+                            Add Project
+                          </Button>
+                          <Button 
+                            onClick={() => setShowAddProject(false)} 
+                            variant="outline" 
+                            size="sm"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {userProjects.length > 0 ? (
                     <div className="grid gap-4">
-                      {projects.map(p => (
+                      {userProjects.map(p => (
                         <div key={p.id} className="p-4 rounded-xl border bg-gradient-to-r from-slate-50 to-white hover:shadow-md transition-all duration-200">
                           <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-semibold">{p.name}</h4>
-                            <Badge className={`${p.color === 'bg-blue-500' ? 'bg-blue-100 text-blue-800' : p.color === 'bg-green-500' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
-                              {Math.round((p.completed/p.tasks)*100)}%
-                            </Badge>
+                            <div className="flex-1">
+                              <h4 className="font-semibold">{p.name}</h4>
+                              {p.description && (
+                                <p className="text-sm text-muted-foreground mt-1">{p.description}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge className={`${
+                                p.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                                p.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {p.status}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleUserProjectDelete(p.id)}
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <Progress value={(p.completed/p.tasks)*100} className="h-2 mb-3" />
+                          <Progress value={p.progress} className="h-2 mb-3" />
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">{p.completed} / {p.tasks} tasks completed</span>
-                  <div className="flex gap-1">
+                            <span className="text-sm text-muted-foreground">{p.progress}% complete</span>
+                            <div className="flex gap-1">
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                      onClick={() => handleProjectProgressUpdate(p.id, Math.max(0, p.completed - 1))}
-                      disabled={p.completed <= 0}
+                                onClick={() => handleUserProjectProgressUpdate(p.id, Math.max(0, p.progress - 10))}
+                                disabled={p.progress <= 0}
                                 className="h-7 w-7 p-0"
                               >
                                 -
@@ -291,22 +436,26 @@ export default function Overview() {
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                      onClick={() => handleProjectProgressUpdate(p.id, Math.min(p.tasks, p.completed + 1))}
-                      disabled={p.completed >= p.tasks}
+                                onClick={() => handleUserProjectProgressUpdate(p.id, Math.min(100, p.progress + 10))}
+                                disabled={p.progress >= 100}
                                 className="h-7 w-7 p-0"
-                    >
-                      +
+                              >
+                                +
                               </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>Started: {new Date(p.startDate).toLocaleDateString()}</span>
+                            {p.endDate && <span>Ends: {new Date(p.endDate).toLocaleDateString()}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
                       <p>No active projects yet</p>
-                      <p className="text-sm">Start a new project to track your progress</p>
+                      <p className="text-sm">Add your first project to start tracking your progress</p>
                     </div>
                   )}
                 </CardContent>
@@ -436,6 +585,45 @@ export default function Overview() {
                         <ArrowRight className="h-4 w-4" />
                       </Button>
                     </Link>
+                  </div>
+                )}
+
+                {/* Recent Applications List */}
+                {applications.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="font-semibold mb-3 text-sm">Recent Applications</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {applications.slice(0, 3).map((app) => (
+                        <div key={app.id} className="p-3 rounded-lg border bg-gradient-to-r from-slate-50 to-white hover:shadow-sm transition-shadow">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h5 className="font-medium text-sm truncate">
+                                {app.jobOpening?.title || app.position || 'Application'}
+                              </h5>
+                              <p className="text-xs text-muted-foreground">
+                                {app.jobOpening?.company || app.company || 'Company'} • 
+                                {new Date(app.appliedDate || app.dateApplied || '').toLocaleDateString()}
+                              </p>
+                              <Badge className={`mt-1 text-xs ${
+                                app.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                app.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {app.status}
+                              </Badge>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleApplicationDelete(app.id)}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 ml-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </CardContent>

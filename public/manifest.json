@@ -1,0 +1,22 @@
+{
+  "name": "GradGate - Innovate your future",
+  "short_name": "GradGate",
+  "description": "A purple-branded recruitment system for learnerships, internships, and more—connecting talent and companies like Mecer Inter-Ed and CAPACITI.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#4C1D95",
+  "theme_color": "#4C1D95",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

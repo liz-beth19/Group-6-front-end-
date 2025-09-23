@@ -50,6 +50,13 @@ export function addApplication(app: Application, userId?: string | number) {
   localStorage.setItem(getUserKey(userId), JSON.stringify(all));
 }
 
+export function deleteApplication(appId: string, userId?: string | number) {
+  const all = getApplications(userId);
+  const filtered = all.filter(app => app.id !== appId);
+  localStorage.setItem(getUserKey(userId), JSON.stringify(filtered));
+  return filtered;
+}
+
 export function getSavedJobs(): string[] {
   try {
     return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]");
